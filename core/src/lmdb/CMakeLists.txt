@@ -1,6 +1,6 @@
 #   BAREOS® - Backup Archiving REcovery Open Sourced
 #
-#   Copyright (C) 2017-2021 Bareos GmbH & Co. KG
+#   Copyright (C) 2017-2023 Bareos GmbH & Co. KG
 #
 #   This program is Free Software; you can redistribute it and/or
 #   modify it under the terms of version three of the GNU Affero General Public
@@ -25,9 +25,22 @@ if(HAVE_FREEBSD_OS)
 endif()
 
 add_library(bareoslmdb SHARED mdb.c midl.c)
-bareos_disable_warnings(TARGET bareoslmdb WARNINGS -Wunused-parameter -Wimplicit-fallthrough -Wstringop-overflow C_ONLY)
+bareos_disable_warnings(
+  TARGET bareoslmdb WARNINGS -Wunused-parameter -Wimplicit-fallthrough
+  -Wstringop-overflow C_ONLY
+)
 if(HAVE_WIN32)
   bareos_disable_warnings(TARGET bareoslmdb WARNINGS -Wreturn-local-addr C_ONLY)
+endif()
+target_compile_options(bareoslmdb PRIVATE -Wno-missing-braces)
+target_compile_definitions(bareoslmdb PRIVATE MDB_MAXKEYSIZE=1023)
+
+# set target_link_options so lto doesn't complain either
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+  target_link_options(bareoslmdb PRIVATE -Wno-stringop-overflow)
+  target_compile_options(
+    bareoslmdb PRIVATE -Wno-stringop-overflow -Wno-return-local-addr
+  )
 endif()
 
 # empty the include_directories
