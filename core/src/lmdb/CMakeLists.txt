@@ -33,7 +33,7 @@ if(HAVE_WIN32)
   bareos_disable_warnings(TARGET bareoslmdb WARNINGS -Wreturn-local-addr C_ONLY)
 endif()
 target_compile_options(bareoslmdb PRIVATE -Wno-missing-braces)
-target_compile_definitions(bareoslmdb PRIVATE MDB_MAXKEYSIZE=1023)
+target_compile_definitions(bareoslmdb PRIVATE MDB_MAXKEYSIZE=0)
 
 # set target_link_options so lto doesn't complain either
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
