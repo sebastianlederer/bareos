@@ -32,14 +32,14 @@
 #include "findlib/find.h"
 #include "filed/accurate.h"
 #include "filed/filed.h"
-#include "filed/jcr_private.h"
+#include "filed/filed_jcr_impl.h"
 
 namespace filedaemon {
 
 static JobControlRecord* NewFiledJcr()
 {
   JobControlRecord* jcr = new_jcr(nullptr);
-  jcr->impl = new JobControlRecordPrivate;
+  jcr->fd_impl = new FiledJcrImpl;
   return jcr;
 }
 
@@ -82,7 +82,6 @@ TEST(accurate, accurate_lmdb)
   AddFilename(
       my_filelist,
       "TestFileNamel12312321312321321321321321321312222222222222222222222222222"
-
       "TestFileNamel12312321312321321321321321321312222222222222222222222222222"
       "TestFileNamel12312321312321321321321321321312222222222222222222222222222"
       "TestFileNamel12312321312321321321321321321312222222222222222222222222222"
