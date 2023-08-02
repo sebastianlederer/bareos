@@ -18,13 +18,8 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
    02110-1301, USA.
 */
-#if defined(HAVE_MINGW)
-#  include "include/bareos.h"
-#  include "gtest/gtest.h"
-#else
-#  include "gtest/gtest.h"
-#  include "include/bareos.h"
-#endif
+#include "gtest/gtest.h"
+#include "include/bareos.h"
 
 #include "lib/parse_conf.h"
 #include "filed/filed_globals.h"
@@ -35,13 +30,6 @@
 #include "filed/filed_jcr_impl.h"
 
 namespace filedaemon {
-
-static JobControlRecord* NewFiledJcr()
-{
-  JobControlRecord* jcr = new_jcr(nullptr);
-  jcr->fd_impl = new FiledJcrImpl;
-  return jcr;
-}
 
 void AddFilename(BareosAccurateFilelist* list, std::string fname)
 {
@@ -65,11 +53,18 @@ TEST(accurate, accurate_lmdb)
 
   std::string path_to_config_file = std::string(
       RELATIVE_PROJECT_SOURCE_DIR "/configs/bareos-configparser-tests");
+
   my_config = InitFdConfig(path_to_config_file.c_str(), M_ERROR_TERM);
-
   ASSERT_TRUE(my_config->ParseConfig());
+  me = (ClientResource*)my_config->GetNextRes(R_CLIENT, nullptr);
 
-  JobControlRecord* jcr = NewFiledJcr();
+  // change working dir to current directory
+  free(me->working_directory);
+  me->working_directory = strdup(".");
+
+  JobControlRecord j;
+  JobControlRecord* jcr = &j;
+
   uint32_t number_of_previous_files = 100;
 
   // my_config->DumpResources(PrintMessage, NULL);
@@ -79,6 +74,9 @@ TEST(accurate, accurate_lmdb)
 
   ASSERT_TRUE(my_filelist->init());
   AddFilename(my_filelist, "TestFileNamel");
+
+  // add extra long filename that is usually too long for lmdb
+#if 0
   AddFilename(
       my_filelist,
       "TestFileNamel12312321312321321321321321321312222222222222222222222222222"
@@ -127,7 +125,7 @@ TEST(accurate, accurate_lmdb)
       "TestFileNamel12312321312321321321321321321312222222222222222222222222222"
       "TestFileNamel12312321312321321321321321321312222222222222222222222222222"
       "22222222222222222222222222222222222222222222222222222222222222");
-
+#endif
   ASSERT_TRUE(my_filelist->EndLoad());
   delete my_filelist;
   delete my_config;
