@@ -74,7 +74,10 @@ thread_pool::~thread_pool()
 
 void thread_pool::borrow_then_pool_work(task&& t, size_t id, thread_pool* pool)
 {
-  t();
+  {
+    auto fun = std::move(t);
+    fun();
+  }
 
   {
     auto locked = pool->workers.lock();
@@ -100,7 +103,10 @@ void thread_pool::borrow_thread(task&& t)
       locked->num_borrowed += 1;
     }
 
-    t();
+    {
+      auto fun = std::move(t);
+      fun();
+    }
 
     {
       auto locked = workers.lock();
@@ -109,6 +115,9 @@ void thread_pool::borrow_thread(task&& t)
   });
 }
 
+
+#include <assert.h>
+
 void thread_pool::pool_work(std::size_t id, thread_pool* pool)
 {
   // id is kept here for debugging purposes.
@@ -116,7 +125,9 @@ void thread_pool::pool_work(std::size_t id, thread_pool* pool)
   try {
     for (std::optional my_task = pool->dequeue(); my_task.has_value();
          my_task = pool->finish_and_dequeue()) {
-      (*my_task)();
+      std::optional t = std::move(my_task);
+      my_task.reset();
+      (*t)();
     }
 
     pool->workers.lock()->dead_workers += 1;
