@@ -1160,7 +1160,7 @@ static inline bool SendPlainData(b_ctx& bctx)
           result p = fut->get();
           if (p.holds_error()) { return std::move(p.error_unchecked()); }
 
-          std::pair[msg, size] = std::move(p.value_unchecked());
+          auto [msg, size] = std::move(p.value_unchecked());
           result ret = SendData(sd, msg.addr(), size);
           if (ret.holds_error()) { return ret; }
 
