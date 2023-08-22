@@ -154,7 +154,7 @@ template <typename T> std::unique_lock<std::mutex> data<T>::wait_for_readable()
 template <typename T> std::optional<T> out<T>::get()
 {
   if (closed) return std::nullopt;
-  std::optional<T> result = std::nullopt;
+  std::optional<T> result;
   {
     auto lock = shared->wait_for_readable();
 
@@ -192,7 +192,7 @@ template <typename T> std::optional<std::vector<T>> out<T>::get_all()
 template <typename T> std::optional<T> out<T>::try_get()
 {
   if (closed) return std::nullopt;
-  std::optional<T> result = std::nullopt;
+  std::optional<T> result;
   bool had_lock = false;
   if (std::unique_lock lock(shared->mutex, std::try_to_lock);
       lock.owns_lock()) {
