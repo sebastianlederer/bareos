@@ -1276,7 +1276,7 @@ static inline bool SendPlainData(b_ctx& bctx)
             } else {
               std::memcpy(file_data, buf->data(), buf->size());
             }
-            return std::move(std::make_pair(std::move(msg), total_size));
+            return std::make_pair(std::move(msg), total_size);
           });
 
       // Send the buffer to the Storage daemon
