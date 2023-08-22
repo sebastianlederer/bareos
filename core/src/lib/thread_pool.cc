@@ -142,7 +142,7 @@ void thread_pool::pool_work(std::size_t id, thread_pool* pool)
 auto thread_pool::dequeue() -> std::optional<task>
 {
   auto locked = queue.lock();
-  locked.wait(queue_or_death, [](std::optional<auto>& queue) {
+  locked.wait(queue_or_death, [](auto& queue) {
     return !queue.has_value() || queue->size() > 0;
   });
   if (!locked->has_value()) { return std::nullopt; }
