@@ -413,12 +413,23 @@ bool BareosSocketTCP::SendData(char* hdr, int32_t pktsiz)
   return ok;
 }
 
+inline bool BareosSocketTCP::FlushBuffer()
+{
+  if (buffer.size()) {
+    LockMutex();
+    bool res = SendData(buffer.data(), buffer.size());
+    UnlockMutex();
+    buffer.clear();
+    if (!res) { return res; }
+  }
+
+  return true;
+}
+
 bool BareosSocketTCP::SendPacket(int32_t* hdr, int32_t pktsiz)
 {
   if (buffer.size() >= 1024 * 1024) {
-    bool res = SendData(buffer.data(), buffer.size());
-    buffer.clear();
-    if (!res) { return res; }
+    if (!FlushBuffer()) { return false; }
   }
 
   if (pktsiz < 1024 * 1024) {
@@ -426,13 +437,12 @@ bool BareosSocketTCP::SendPacket(int32_t* hdr, int32_t pktsiz)
     return true;
   }
 
-  if (buffer.size()) {
-    bool res = SendData(buffer.data(), buffer.size());
-    buffer.clear();
-    if (!res) { return res; }
-  }
+  if (!FlushBuffer()) { return false; }
 
-  return SendData((char*)hdr, pktsiz);
+  LockMutex();
+  auto rc = SendData((char*)hdr, pktsiz);
+  UnlockMutex();
+  return rc;
 }
 
 /*
@@ -502,8 +512,6 @@ bool BareosSocketTCP::send()
     }
   }
 
-  UnlockMutex();
-
   return ok;
 }
 
@@ -533,13 +541,8 @@ int32_t BareosSocketTCP::recv()
   message_length = 0;
   if (errors || IsTerminated()) { return BNET_HARDEOF; }
 
-  if (mutex_) { mutex_->lock(); }
-
-  if (buffer.size()) {
-    bool res = SendData(buffer.data(), buffer.size());
-    buffer.clear();
-    if (!res) { return res; }
-  }
+  if (!FlushBuffer()) { return -3; }
+  LockMutex();
 
   read_seqno++;                /* bump sequence number */
   timer_start = watchdog_time; /* set start wait time */
@@ -637,7 +640,7 @@ int32_t BareosSocketTCP::recv()
    * debugging. */
 
 get_out:
-  if (mutex_) { mutex_->unlock(); }
+  UnlockMutex();
 
   return nbytes; /* return actual length of message */
 }
@@ -843,11 +846,7 @@ void BareosSocketTCP::RestoreBlocking(int flags)
  */
 int BareosSocketTCP::WaitData(int sec, int usec)
 {
-  if (buffer.size()) {
-    bool res = SendData(buffer.data(), buffer.size());
-    buffer.clear();
-    if (!res) { return res; }
-  }
+  if (!FlushBuffer()) { return -1; }
 
   int msec;
 
@@ -890,13 +889,9 @@ int BareosSocketTCP::WaitDataIntr(int sec, int usec)
 
 void BareosSocketTCP::close()
 {
-  if (buffer.size()) {
-    bool res = SendData(buffer.data(), buffer.size());
-    buffer.clear();
-    if (!res) {
-      Jmsg(BareosSocket::jcr(), 0, M_WARNING,
-           "Could not flush buffer: ERR=%s\n", strerror(errno));
-    }
+  if (!FlushBuffer()) {
+    Jmsg(BareosSocket::jcr(), 0, M_WARNING, "Could not flush buffer: ERR=%s\n",
+         strerror(errno));
   }
 
   /* if not cloned */
