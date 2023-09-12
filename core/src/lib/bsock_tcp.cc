@@ -371,8 +371,7 @@ bool BareosSocketTCP::SetKeepalive(JobControlRecord* jcr,
   return true;
 }
 
-
-bool BareosSocketTCP::SendPacket(int32_t* hdr, int32_t pktsiz)
+bool BareosSocketTCP::SendData(char* hdr, int32_t pktsiz)
 {
   Enter(400);
 
@@ -414,6 +413,28 @@ bool BareosSocketTCP::SendPacket(int32_t* hdr, int32_t pktsiz)
   return ok;
 }
 
+bool BareosSocketTCP::SendPacket(int32_t* hdr, int32_t pktsiz)
+{
+  if (buffer.size() >= 1024 * 1024) {
+    bool res = SendData(buffer.data(), buffer.size());
+    buffer.clear();
+    if (!res) { return res; }
+  }
+
+  if (pktsiz < 1024 * 1024) {
+    buffer.insert(buffer.end(), (char*)hdr, (char*)hdr + pktsiz);
+    return true;
+  }
+
+  if (buffer.size()) {
+    bool res = SendData(buffer.data(), buffer.size());
+    buffer.clear();
+    if (!res) { return res; }
+  }
+
+  return SendData((char*)hdr, pktsiz);
+}
+
 /*
  * Send a message over the network. The send consists of
  * two network packets. The first is sends a 32 bit integer containing
@@ -453,8 +474,6 @@ bool BareosSocketTCP::send()
     }
     return false;
   }
-
-  LockMutex();
 
   // Compute total packet length
   if (o_msglen <= 0) {
@@ -515,6 +534,12 @@ int32_t BareosSocketTCP::recv()
   if (errors || IsTerminated()) { return BNET_HARDEOF; }
 
   if (mutex_) { mutex_->lock(); }
+
+  if (buffer.size()) {
+    bool res = SendData(buffer.data(), buffer.size());
+    buffer.clear();
+    if (!res) { return res; }
+  }
 
   read_seqno++;                /* bump sequence number */
   timer_start = watchdog_time; /* set start wait time */
@@ -818,6 +843,12 @@ void BareosSocketTCP::RestoreBlocking(int flags)
  */
 int BareosSocketTCP::WaitData(int sec, int usec)
 {
+  if (buffer.size()) {
+    bool res = SendData(buffer.data(), buffer.size());
+    buffer.clear();
+    if (!res) { return res; }
+  }
+
   int msec;
 
   msec = (sec * 1000) + (usec / 1000);
@@ -859,6 +890,15 @@ int BareosSocketTCP::WaitDataIntr(int sec, int usec)
 
 void BareosSocketTCP::close()
 {
+  if (buffer.size()) {
+    bool res = SendData(buffer.data(), buffer.size());
+    buffer.clear();
+    if (!res) {
+      Jmsg(BareosSocket::jcr(), 0, M_WARNING,
+           "Could not flush buffer: ERR=%s\n", strerror(errno));
+    }
+  }
+
   /* if not cloned */
   ClearLocking();
   CloseTlsConnectionAndFreeMemory();
