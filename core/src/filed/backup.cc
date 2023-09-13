@@ -111,6 +111,8 @@ bool BlastDataToStorageDaemon(JobControlRecord* jcr, crypto_cipher_t cipher)
   bool ok = true;
 
   sd = jcr->store_bsock;
+  sd->MakeReadsBuffered();
+  sd->MakeWritesBuffered();
 
   jcr->setJobStatusWithPriorityCheck(JS_Running);
 
@@ -190,6 +192,8 @@ bool BlastDataToStorageDaemon(JobControlRecord* jcr, crypto_cipher_t cipher)
 #if defined(WIN32_VSS)
   CloseVssBackupSession(jcr);
 #endif
+  sd->MakeReadsUnBuffered();
+  sd->MakeWritesUnBuffered();
 
   AccurateFinish(jcr); /* send deleted or base file list to SD */
 

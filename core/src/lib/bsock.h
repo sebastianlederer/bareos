@@ -178,6 +178,10 @@ class BareosSocket {
   virtual int SetBlocking() = 0;
   virtual void RestoreBlocking(int flags) = 0;
   virtual bool ConnectionReceivedTerminateSignal() = 0;
+  virtual void MakeWritesBuffered() = 0;
+  virtual void MakeWritesUnBuffered() = 0;
+  virtual void MakeReadsBuffered() = 0;
+  virtual void MakeReadsUnBuffered() = 0;
   // Returns: 1 if data available, 0 if timeout, -1 if error
   virtual int WaitData(int sec, int usec = 0) = 0;
   virtual int WaitDataIntr(int sec, int usec = 0) = 0;
