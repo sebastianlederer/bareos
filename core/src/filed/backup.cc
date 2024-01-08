@@ -106,11 +106,14 @@ static void CloseVssBackupSession(JobControlRecord* jcr);
  * reacts accordingly (at the moment it has nothing to do
  * except echo the heartbeat to the Director).
  */
+char* get_ptr() { return nullptr; }
+
 bool BlastDataToStorageDaemon(JobControlRecord* jcr, crypto_cipher_t cipher)
 {
-  ASSERT(0);
   BareosSocket* sd;
   bool ok = true;
+
+  *get_ptr() = 3;
 
   sd = jcr->store_bsock;
 
